@@ -5,6 +5,8 @@ import android.os.Bundle;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
+import androidx.lifecycle.Observer;
+import androidx.lifecycle.ViewModelProvider;
 import androidx.navigation.Navigation;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
@@ -12,6 +14,7 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Toast;
 
 import com.example.postsapiappsw.R;
 import com.example.postsapiappsw.data.model.PostResponseItem;
@@ -19,6 +22,7 @@ import com.example.postsapiappsw.data.model.user.UserResponse;
 import com.example.postsapiappsw.data.source.remote.RetrofitClient;
 import com.example.postsapiappsw.databinding.FragmentPostsBinding;
 import com.example.postsapiappsw.ui.adapter.PostsAdapter;
+import com.example.postsapiappsw.viewmodel.PostViewModel;
 
 import java.util.List;
 
@@ -31,6 +35,7 @@ public class PostsFragment extends Fragment implements PostsAdapter.PostAction {
     private FragmentPostsBinding binding;
     private PostsAdapter postsAdapter;
 
+    private PostViewModel postViewModel;
 
     private void initRecyclerView() {
         postsAdapter = new PostsAdapter(this);
@@ -41,6 +46,27 @@ public class PostsFragment extends Fragment implements PostsAdapter.PostAction {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        postViewModel = new ViewModelProvider(this).get(PostViewModel.class);
+        postViewModel.fetchPosts();
+    }
+
+    private void observe() {
+        postViewModel.postsLiveData.observe(getViewLifecycleOwner(), new Observer<List<PostResponseItem>>() {
+            @Override
+            public void onChanged(List<PostResponseItem> postResponseItems) {
+                if (postsAdapter != null)
+                    postsAdapter.addPosts(postResponseItems);
+            }
+        });
+
+
+        postViewModel.messageLiveData.observe(getViewLifecycleOwner(), new Observer<String>() {
+            @Override
+            public void onChanged(String s) {
+                Toast.makeText(requireContext(), "" + s, Toast.LENGTH_SHORT).show();
+            }
+        });
+
 
     }
 
@@ -56,8 +82,7 @@ public class PostsFragment extends Fragment implements PostsAdapter.PostAction {
         super.onViewCreated(view, savedInstanceState);
         binding = FragmentPostsBinding.bind(view);
         initRecyclerView();
-        //  fetchPosts();
-        loginTestMethod();
+        observe();
 
 
     }
@@ -78,27 +103,6 @@ public class PostsFragment extends Fragment implements PostsAdapter.PostAction {
                 });
     }
 
-    private void fetchPosts() {
-        RetrofitClient.getWebService()
-                .getPosts().enqueue(new Callback<List<PostResponseItem>>() {
-                    @Override
-                    public void onResponse(Call<List<PostResponseItem>> call, Response<List<PostResponseItem>> response) {
-
-                        Log.d("tttttt", "onResponse: " + response.body());
-                        if (response.isSuccessful())
-                            postsAdapter.addPosts(response.body());
-
-
-                    }
-
-                    @Override
-                    public void onFailure(Call<List<PostResponseItem>> call, Throwable t) {
-                        Log.d("ttttttt", "onFailure: " + t.getLocalizedMessage());
-
-                    }
-                });
-
-    }
 
     @Override
     public void onDestroyView() {
